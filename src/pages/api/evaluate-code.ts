@@ -1,7 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) throw new Error('Missing API Key');
+
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { code, questionTitle, questionDescription, testCases } = req.body;
+    const { code, language, questionTitle, questionDescription, testCases } = req.body;
     if (!code || !questionTitle) {
       return res.status(400).json({ message: 'Missing required code or question parameters' });
     }
@@ -18,11 +21,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const prompt = `You are a code execution engine evaluating user code heuristically. 
     Question: ${questionTitle}
+    Language: ${language || 'JavaScript'}
     Description: ${questionDescription}
     User Code:
-    \`\`\`
+    \`\`\`${language || 'javascript'}
     ${code}
     \`\`\`
+    
+    Evaluate the code based on ${language || 'JavaScript'}'s specific syntax.
     
     Test Cases to check (if any):
     ${JSON.stringify(testCases)}

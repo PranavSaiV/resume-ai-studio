@@ -2,7 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../../../lib/db';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) throw new Error('Missing API Key');
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

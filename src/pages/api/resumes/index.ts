@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const resumes = await prisma.resume.findMany({
       where: { userId },
-      select: { id: true, title: true, isActive: true, createdAt: true, updatedAt: true },
+      select: { id: true, title: true, isActive: true, createdAt: true, updatedAt: true, content: true },
       orderBy: { createdAt: 'desc' }
     });
     return res.status(200).json(resumes || []);

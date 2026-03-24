@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Plus, Zap, Download, Clock, BarChart3, Settings, LogOut, BookOpen,
-  Search, Trash2, Copy, Eye, ChevronRight, Sparkles, TrendingUp, User, Home, Edit3,
+  Search, Trash2, Copy, Eye, ChevronRight, Sparkles, TrendingUp, User, Home, Edit3, Target,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [aiLoading, setAiLoading] = React.useState<string | null>(null);
   const [exportFormat, setExportFormat] = React.useState<"pdf" | "docx">("pdf");
   const [atsScore, setAtsScore] = React.useState<number | null>(null);
+  const [quizAccuracy, setQuizAccuracy] = React.useState<number | null>(null);
   const handleGenerateNew = () => {
     router.push("/builder");
   };
@@ -69,10 +70,13 @@ export default function Dashboard() {
       const data = await resResumes.json();
 
       setResumes(data || []);
+      const statsRes = await fetch("/api/stats", { headers: { "user-id": userId } });
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setAtsScore(statsData.latestAtsScore || 0);
+        setQuizAccuracy(statsData.quizAccuracy || 0);
+      }
       setLoading(false);
-
-      const storedAts = localStorage.getItem("latestAtsScore");
-      if (storedAts) setAtsScore(parseInt(storedAts, 10));
     }
     load();
   }, [router]);
@@ -119,7 +123,7 @@ export default function Dashboard() {
     { label: "Total Resumes", value: String(resumes.length), icon: FileText, color: "var(--neon-blue)" },
     { label: "Active", value: String(resumes.filter((r) => r.isActive).length), icon: TrendingUp, color: "var(--neon-green)" },
     { label: "ATS Score", value: atsScore ? `${atsScore}%` : "—", icon: Zap, color: "var(--neon-purple)" },
-    { label: "Views", value: "—", icon: Eye, color: "var(--neon-indigo)" },
+    { label: "Accuracy", value: quizAccuracy !== null ? `${quizAccuracy}%` : "—", icon: Target, color: "var(--neon-indigo)" },
   ];
 
   if (loading) {
@@ -261,9 +265,22 @@ export default function Dashboard() {
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <Clock className="h-3 w-3" /> {timeAgo(resume.updatedAt ?? resume.createdAt ?? new Date().toISOString())}
-                        </span>
+                        <div className="flex flex-col gap-1 mt-2 text-[11px] text-muted-foreground">
+                          {((resume.content as any)?.experience?.length > 0) && (
+                            <p className="truncate max-w-sm"><span className="font-semibold text-gray-300">Experience:</span> {(resume.content as any).experience.map((e: any) => e.role || e.company || '').filter(Boolean).join(', ')}</p>
+                          )}
+                          {((resume.content as any)?.education?.length > 0) && (
+                            <p className="truncate max-w-sm"><span className="font-semibold text-gray-300">Education:</span> {(resume.content as any).education.map((e: any) => e.degree || e.institution || '').filter(Boolean).join(', ')}</p>
+                          )}
+                          {((resume.content as any)?.skills?.length > 0) && (
+                            <p className="truncate max-w-sm"><span className="font-semibold text-gray-300">Skills:</span> {(resume.content as any).skills.join(', ')}</p>
+                          )}
+                          {!((resume.content as any)?.experience?.length > 0) && !((resume.content as any)?.education?.length > 0) && !((resume.content as any)?.skills?.length > 0) && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              No content extracted yet
+                            </span>
+                          )}
+                        </div>
                         {(resume.content as any)?.suggestions?.[0] && (
                           <p className="text-[10px] text-muted-foreground mt-1 truncate max-w-sm border-l border-white/10 pl-2 ml-1">
                             Tip: {(resume.content as any).suggestions[0]}

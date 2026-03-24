@@ -64,13 +64,19 @@ export default function ResumeEditor() {
       if (!data) { router.push("/dashboard"); return; }
 
       setTitle(data.title || "Untitled Resume");
-      const pi = data.personalInfo;
+      
+      const c = data.content || {};
+      const pi = (data.personalInfo && Object.keys(data.personalInfo).length > 0) ? data.personalInfo : c.personalInfo;
       setPersonalInfo(pi && typeof pi === "object" ? { ...defaultPersonalInfo, ...pi } : defaultPersonalInfo);
-      const exp = data.experience || [];
+      
+      const exp = (data.experience && data.experience.length > 0) ? data.experience : (c.experience || []);
       setExperience(exp.map((e: any) => ({ ...e, id: e.id || uid() })));
-      const edu = data.education || [];
+      
+      const edu = (data.education && data.education.length > 0) ? data.education : (c.education || []);
       setEducation(edu.map((e: any) => ({ ...e, id: e.id || uid() })));
-      setSkills(data.skills || []);
+      
+      const sk = (data.skills && data.skills.length > 0) ? data.skills : (c.skills || []);
+      setSkills(sk);
       setLoading(false);
     }
     if (router.isReady) load();

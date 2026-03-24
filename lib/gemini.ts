@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) throw new Error('Missing API Key');
+const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 export async function analyzeResumeTextWithRetry(text: string, retries = 1): Promise<{ atsScore: number; suggestions: string[]; skills: string[] }> {
