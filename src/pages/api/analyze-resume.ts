@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GROQ_API_KEY;
 if (!apiKey) throw new Error('Missing API Key');
-const genAI = new GoogleGenerativeAI(apiKey);
+const groq = new Groq({ apiKey });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -16,27 +16,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Missing jobDescription or resumeData' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
     const prompt = `Analyze the provided resume against the job description.
     Job Description: ${jobDescription}
     Resume Data: ${JSON.stringify(resumeData)}
     
-    Return ONLY a valid JSON object with the exact following schema:
+    You MUST respond with a valid JSON object. Do not include markdown formatting or extra text.
+    The JSON object must have EXACTLY this schema:
     {
-      "atsScore": a number from 0 to 100,
-      "summary": "a short text summarizing the fit",
-      "extractedSkills": ["skill1", "skill2"],
-      "missingKeywords": ["keyword1", "keyword2"],
-      "suggestedRoles": ["role1", "role2"]
-    }
-    `;
+      "atsScore": 85,
+      "suggestions": ["Improve action verbs", "Add metrics to experience"],
+      "skills": ["React", "TypeScript", "Node.js"]
+    }`;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.1-8b-instant',
+      temperature: 0.1,
+      response_format: { type: 'json_object' }
+    });
 
-    const analysis = JSON.parse(cleanText);
+    const responseText = chatCompletion.choices[0]?.message?.content || "{}";
+    const analysis = JSON.parse(responseText);
+    
     res.status(200).json(analysis);
   } catch (error) {
     console.error(error);

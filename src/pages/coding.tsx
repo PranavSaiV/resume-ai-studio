@@ -28,35 +28,26 @@ export default function CodingModule() {
     setEvaluating(true);
     setResult({ output: "Running...", status: "Running" });
     try {
-      const languageVersions: Record<string, string> = {
-        javascript: "18.15.0",
-        python: "3.10.0",
-        java: "15.0.2"
-      };
-      
-      const v = languageVersions[language] || "18.15.0";
-
-      const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+      const res = await fetch("/api/evaluate-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          code: code,
           language: language,
-          version: v,
-          files: [{ content: code }]
+          questionTitle: problem.title,
+          questionDescription: problem.description,
+          testCases: problem.testCases
         })
       });
       const data = await res.json();
       
-      const compileOut = data.compile?.output || "";
-      const runOut = data.run?.output || "";
-      const runErr = data.run?.stderr || "";
-      let finalOutput = compileOut;
-      if (runOut) finalOutput += (finalOutput ? "\n" : "") + runOut;
-      if (runErr && !runOut.includes(runErr)) finalOutput += (finalOutput ? "\n" : "") + runErr;
+      if (!res.ok) {
+         throw new Error(data.message || "Failed to evaluate code");
+      }
 
       setResult({
-        status: (data.run && data.run.code === 0) ? "Success" : "Failed",
-        output: finalOutput.trim() || "No output",
+        status: data.status === "Passed" || data.status === "Success" ? "Success" : "Failed",
+        output: data.feedback || "Evaluated correctly without specific feedback.",
       });
     } catch (e: any) {
       setResult({ status: "Error", output: e.message || String(e) });

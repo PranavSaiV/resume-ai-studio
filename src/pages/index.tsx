@@ -164,8 +164,11 @@ export default function AuthPage() {
               {/* Left - Branding */}
               <div className="p-12 lg:p-16 flex flex-col justify-center border-r" style={{ borderColor: "hsl(var(--glass-border))" }}>
                 <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
+                  <div className="flex items-center gap-3 mb-6">
+                    <img src="/forge.png" alt="Anvil Logo" className="w-12 h-12 filter brightness-110 drop-shadow-[0_0_10px_hsl(var(--neon-blue)/0.8)]" />
+                  </div>
                   <h1 className="font-display text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight mb-4">
-                    <span className="text-gradient">Resume AI</span><br /><span className="text-gradient">Studio</span>
+                    <span className="text-gradient">SkillForge</span><br /><span className="text-gradient">Studio</span>
                   </h1>
                   <p className="text-muted-foreground text-base leading-relaxed max-w-sm font-light">
                     Craft professional resumes with AI-powered intelligence. Stand out with beautiful, tailored documents.

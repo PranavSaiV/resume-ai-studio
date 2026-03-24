@@ -89,7 +89,7 @@ export function QuizComponent() {
       const data = await res.json();
       setAiSuggestion(data.suggestion);
     } catch (e) {
-      setAiSuggestion("Failed to load Gemini analysis suggestions.");
+      setAiSuggestion("Failed to load AI analysis suggestions.");
     }
     setAiLoading(false);
   };
@@ -123,7 +123,7 @@ export function QuizComponent() {
           {aiLoading ? (
              <div className="flex items-center gap-3 text-sm text-gray-400">
                <div className="w-5 h-5 border-2 border-[var(--neon-indigo)] border-t-transparent rounded-full animate-spin" />
-               Analyzing your weak points via Gemini...
+               Analyzing your weak points via AI...
              </div>
           ) : (
             <div className="space-y-4 relative z-10">

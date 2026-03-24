@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/db';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      throw new Error('Missing API Key');
+      throw new Error('Missing GROQ_API_KEY');
     }
 
     if (req.method !== 'POST') {
@@ -20,7 +20,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Bad Request' });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const openai = new OpenAI({
+      baseURL: 'https://api.groq.com/openai/v1',
+      apiKey: apiKey,
+    });
     
     let resume = null;
     if (resumeId) {
@@ -41,14 +44,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       content: resume.content
     }) : "No resume provided.";
 
-    const prompt = `You are SkillForge AI, a career mentor. Use the following resume data to answer the user's career questions: \n${resumeContent}.\n\nUser message: "${message}"\n\nIf no resume is provided, give general career advice. Keep formatting readable and concise.`;
+    const systemPrompt = `You are the SkillForge Career Mentor. Using this resume: ${resumeContent}, provide fast, accurate, and actionable career advice. If the resume is empty, guide them on how to fill it.`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(prompt);
+    const chatCompletion = await openai.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
+      model: 'llama-3.1-8b-instant',
+    });
     
-    return res.status(200).json({ reply: result.response.text() });
+    return res.status(200).json({ reply: chatCompletion.choices[0]?.message?.content || "" });
   } catch (error: any) {
     console.error("AI Assistant Error:", error);
-    return res.status(500).json({ error: 'AI Error' });
+    return res.status(200).json({ message: "System is busy: " + (error.message || String(error)) });
   }
 }

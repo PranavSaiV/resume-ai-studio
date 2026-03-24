@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { prisma } from '../../../lib/db';
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GROQ_API_KEY;
 if (!apiKey) throw new Error('Missing API Key');
-const genAI = new GoogleGenerativeAI(apiKey);
+const openai = new OpenAI({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -27,8 +27,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const resumeContext = resumes.length > 0 ? JSON.stringify(resumes[0]) : "No resume available.";
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
     const prompt = `You are an AI Assistant for a platform called SkillForge Studio. The user is asking you exactly this:
 "${message}"
 
@@ -37,8 +35,11 @@ ${resumeContext}
 
 Respond in a helpful, conversational manner, providing concrete tips or improvements based on their resume data.`;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    const chatCompletion = await openai.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.1-8b-instant',
+    });
+    const responseText = chatCompletion.choices[0]?.message?.content || "I couldn't generate a response.";
 
     res.status(200).json({ reply: responseText });
   } catch (error) {

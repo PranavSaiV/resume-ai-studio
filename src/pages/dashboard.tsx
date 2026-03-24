@@ -18,7 +18,6 @@ interface Resume {
 
 const sidebarItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard", active: true },
-  { icon: FileText, label: "My Resumes", href: "/dashboard", active: false },
   { icon: Sparkles, label: "AI Assistant", href: "/assistant", active: false },
   { icon: BarChart3, label: "Analytics", href: "/analytics", active: false },
   { icon: BookOpen, label: "Skill Prep", href: "/skill-prep", active: false },
@@ -51,6 +50,8 @@ export default function Dashboard() {
   const [exportFormat, setExportFormat] = React.useState<"pdf" | "docx">("pdf");
   const [atsScore, setAtsScore] = React.useState<number | null>(null);
   const [quizAccuracy, setQuizAccuracy] = React.useState<number | null>(null);
+  const [totalResumes, setTotalResumes] = React.useState<number>(0);
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "active">("all");
   const handleGenerateNew = () => {
     router.push("/builder");
   };
@@ -73,8 +74,9 @@ export default function Dashboard() {
       const statsRes = await fetch("/api/stats", { headers: { "user-id": userId } });
       if (statsRes.ok) {
         const statsData = await statsRes.json();
-        setAtsScore(statsData.latestAtsScore || 0);
-        setQuizAccuracy(statsData.quizAccuracy || 0);
+        setAtsScore(Number.isNaN(statsData.latestAtsScore) ? 0 : (statsData.latestAtsScore || 0));
+        setQuizAccuracy(Number.isNaN(statsData.quizAccuracy) ? 0 : (statsData.quizAccuracy || 0));
+        setTotalResumes(statsData.totalResumes || 0);
       }
       setLoading(false);
     }
@@ -115,15 +117,17 @@ export default function Dashboard() {
     if (res.ok && data) setResumes((prev) => [data, ...prev]);
   }
 
-  const filteredResumes = resumes.filter((r) =>
-    r.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredResumes = resumes.filter((r) => {
+    const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || (statusFilter === "active" && r.isActive);
+    return matchesSearch && matchesStatus;
+  });
 
   const stats = [
-    { label: "Total Resumes", value: String(resumes.length), icon: FileText, color: "var(--neon-blue)" },
-    { label: "Active", value: String(resumes.filter((r) => r.isActive).length), icon: TrendingUp, color: "var(--neon-green)" },
-    { label: "ATS Score", value: atsScore ? `${atsScore}%` : "—", icon: Zap, color: "var(--neon-purple)" },
-    { label: "Accuracy", value: quizAccuracy !== null ? `${quizAccuracy}%` : "—", icon: Target, color: "var(--neon-indigo)" },
+    { id: "all", label: "Total Resumes", value: String(totalResumes || 0), icon: FileText, color: "var(--neon-blue)" },
+    { id: "active", label: "Active", value: String(resumes.filter((r) => r.isActive).length), icon: TrendingUp, color: "var(--neon-green)" },
+    { label: "ATS Score", value: (atsScore !== null && !isNaN(atsScore)) ? `${atsScore}%` : "0%", icon: Zap, color: "var(--neon-purple)" },
+    { label: "Accuracy", value: (quizAccuracy !== null && !isNaN(quizAccuracy)) ? `${quizAccuracy}%` : "0%", icon: Target, color: "var(--neon-indigo)" },
   ];
 
   if (loading) {
@@ -157,7 +161,7 @@ export default function Dashboard() {
           style={{ borderColor: "hsl(var(--glass-border))", background: "hsl(235 30% 8% / 0.6)", backdropFilter: "blur(30px)" }}
           initial={{ x: -260, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}>
           <div className="p-6 pb-4 flex items-center gap-3">
-            <img src="/image_7.png" alt="Anvil Logo" className="w-8 h-8 filter brightness-110 drop-shadow-[0_0_8px_hsl(var(--neon-blue)/0.8)]" />
+            <img src="/forge.png" alt="Anvil Logo" className="w-8 h-8 filter brightness-110 drop-shadow-[0_0_8px_hsl(var(--neon-blue)/0.8)]" />
             <div>
               <h1 className="font-display text-2xl font-extrabold tracking-tight leading-none"><span className="text-gradient">SkillForge</span></h1>
               <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-widest">Studio</p>
@@ -166,7 +170,14 @@ export default function Dashboard() {
           <nav className="flex-1 px-3 space-y-1 mt-2">
             {sidebarItems.map((item, idx) => (
               <motion.button key={idx}
-                onClick={() => item.href && router.push(item.href)}
+                onClick={() => {
+                  if (item.href === "/dashboard" && router.pathname === "/dashboard") {
+                    if (item.label === "My Resumes") setStatusFilter("active");
+                    else setStatusFilter("all");
+                  } else if (item.href) {
+                    router.push(item.href);
+                  }
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative ${
                   item.active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 style={item.active ? { background: "hsl(var(--glass-hover))", boxShadow: "inset 0 0 0 1px hsl(var(--neon-indigo) / 0.2)" } : {}}
@@ -211,7 +222,11 @@ export default function Dashboard() {
             {/* Stats */}
             <motion.div className="grid grid-cols-4 gap-4 mb-8" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}>
               {stats.map((stat, idx) => (
-                <motion.div key={idx} className="glass-card-hover p-5 group cursor-default" whileHover={{ y: -2, transition: { duration: 0.2 } }}>
+                <motion.div key={idx} 
+                  className={`glass-card-hover p-5 group ${stat.id ? "cursor-pointer" : "cursor-default"}`}
+                  style={statusFilter === stat.id ? { border: `1px solid ${stat.color}`, background: "hsl(var(--glass-hover))" } : {}}
+                  onClick={() => { if (stat.id) setStatusFilter(stat.id as "all" | "active") }}
+                  whileHover={{ y: -2, transition: { duration: 0.2 } }}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300"
                       style={{ background: `hsl(${stat.color} / 0.1)`, color: `hsl(${stat.color})` }}>

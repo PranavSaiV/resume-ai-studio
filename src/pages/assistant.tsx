@@ -7,7 +7,6 @@ import {
 
 const sidebarItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard", active: false },
-  { icon: FileText, label: "My Resumes", href: "/dashboard", active: false },
   { icon: Sparkles, label: "AI Assistant", href: "/assistant", active: true },
   { icon: BarChart3, label: "Analytics", href: "/analytics", active: false },
   { icon: BookOpen, label: "Skill Prep", href: "/skill-prep", active: false },
@@ -58,7 +57,7 @@ export default function Assistant() {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessages(prev => [...prev, { role: "ai", text: data.reply || "I couldn't generate a response." }]);
+        setMessages(prev => [...prev, { role: "ai", text: data.reply || data.message || "I couldn't generate a response." }]);
       } else {
         setMessages(prev => [...prev, { role: "ai", text: `Error: ${data.error || data.message || "Failed to process request."}` }]);
       }
@@ -83,7 +82,7 @@ export default function Assistant() {
       <motion.aside className="w-[260px] flex-shrink-0 flex flex-col border-r z-10"
         style={{ borderColor: "hsl(var(--glass-border))", background: "hsl(235 30% 8% / 0.6)", backdropFilter: "blur(30px)" }}>
         <div className="p-6 pb-4 flex items-center gap-3">
-          <img src="/image_7.png" alt="Anvil Logo" className="w-8 h-8 filter brightness-110 drop-shadow-[0_0_8px_hsl(var(--neon-blue)/0.8)]" />
+          <img src="/forge.png" alt="Anvil Logo" className="w-8 h-8 filter brightness-110 drop-shadow-[0_0_8px_hsl(var(--neon-blue)/0.8)]" />
           <div>
             <h1 className="font-display text-2xl font-extrabold tracking-tight leading-none"><span className="text-gradient">SkillForge</span></h1>
             <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-widest">Studio</p>
@@ -125,7 +124,7 @@ export default function Assistant() {
       <main className="flex-1 flex flex-col z-10 h-screen overflow-hidden">
         <div className="px-8 py-8 flex-shrink-0">
           <h2 className="text-3xl font-display font-bold text-foreground">AI Assistant</h2>
-          <p className="text-muted-foreground text-sm mt-1">Chat with Gemini about your resume or for general advice.</p>
+          <p className="text-muted-foreground text-sm mt-1">Chat with our AI about your resume or for general advice.</p>
         </div>
         
         <div className="flex-1 flex flex-col px-8 pb-8 overflow-hidden max-w-[1000px] w-full mx-auto">

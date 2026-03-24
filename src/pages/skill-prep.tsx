@@ -7,7 +7,6 @@ import {
 
 const sidebarItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard", active: false },
-  { icon: FileText, label: "My Resumes", href: "/dashboard", active: false },
   { icon: Sparkles, label: "AI Assistant", href: "/assistant", active: false },
   { icon: BarChart3, label: "Analytics", href: "/analytics", active: false },
   { icon: BookOpen, label: "Skill Prep", href: "/skill-prep", active: true },
@@ -33,7 +32,7 @@ export default function SkillPrep() {
       <motion.aside className="w-[260px] flex-shrink-0 flex flex-col border-r z-10"
         style={{ borderColor: "hsl(var(--glass-border))", background: "hsl(235 30% 8% / 0.6)", backdropFilter: "blur(30px)" }}>
         <div className="p-6 pb-4 flex items-center gap-3">
-          <img src="/image_7.png" alt="Anvil Logo" className="w-8 h-8 filter brightness-110 drop-shadow-[0_0_8px_hsl(var(--neon-blue)/0.8)]" />
+          <img src="/forge.png" alt="Anvil Logo" className="w-8 h-8 filter brightness-110 drop-shadow-[0_0_8px_hsl(var(--neon-blue)/0.8)]" />
           <div>
             <h1 className="font-display text-2xl font-extrabold tracking-tight leading-none"><span className="text-gradient">SkillForge</span></h1>
             <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-widest">Studio</p>

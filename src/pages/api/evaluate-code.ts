@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GROQ_API_KEY;
 if (!apiKey) throw new Error('Missing API Key');
-
-const genAI = new GoogleGenerativeAI(apiKey);
+const openai = new OpenAI({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -16,8 +15,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!code || !questionTitle) {
       return res.status(400).json({ message: 'Missing required code or question parameters' });
     }
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `You are a code execution engine evaluating user code heuristically. 
     Question: ${questionTitle}
@@ -39,14 +36,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     "feedback": a detailed string explaining logical errors or praising the solution
     `;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const chatCompletion = await openai.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.1-8b-instant',
+      response_format: { type: "json_object" }
+    });
+    const responseText = chatCompletion.choices[0]?.message?.content || "{}";
+    
+    // Safely extract JSON block
+    const match = responseText.match(/\{[\s\S]*\}/);
+    const cleanText = match ? match[0] : "{}";
 
     const evaluation = JSON.parse(cleanText);
     res.status(200).json(evaluation);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to evaluate code' });
+  } catch (error: any) {
+    console.error("Evaluate Code Error:", error);
+    res.status(500).json({ message: error.message || 'Failed to evaluate code' });
   }
 }
