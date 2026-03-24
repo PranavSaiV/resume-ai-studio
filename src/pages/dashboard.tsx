@@ -2,24 +2,27 @@ import * as React from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FileText, Plus, Zap, Download, Clock, BarChart3, Settings, LogOut,
+  FileText, Plus, Zap, Download, Clock, BarChart3, Settings, LogOut, BookOpen,
   Search, Trash2, Copy, Eye, ChevronRight, Sparkles, TrendingUp, User, Home, Edit3,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface Resume {
   id: string;
   title: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  isActive: boolean;
+  content: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const sidebarItems = [
-  { icon: Home, label: "Dashboard", active: true },
-  { icon: FileText, label: "My Resumes", active: false },
-  { icon: Sparkles, label: "AI Assistant", active: false },
-  { icon: BarChart3, label: "Analytics", active: false },
-  { icon: Settings, label: "Settings", active: false },
+  { icon: Home, label: "Dashboard", href: "/dashboard", active: true },
+  { icon: FileText, label: "My Resumes", href: "/dashboard", active: false },
+  { icon: Sparkles, label: "AI Assistant", href: "/assistant", active: false },
+  { icon: BarChart3, label: "Analytics", href: "/analytics", active: false },
+  { icon: BookOpen, label: "Skill Prep", href: "/skill-prep", active: false },
+  { icon: Settings, label: "Settings", href: "/settings", active: false },
 ];
 
 const orbConfigs = [
@@ -29,15 +32,11 @@ const orbConfigs = [
 ];
 
 function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
+  try {
+    return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
+  } catch (e) {
+    return "just now";
+  }
 }
 
 export default function Dashboard() {
@@ -48,6 +47,12 @@ export default function Dashboard() {
   const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [creating, setCreating] = React.useState(false);
+  const [aiLoading, setAiLoading] = React.useState<string | null>(null);
+  const [exportFormat, setExportFormat] = React.useState<"pdf" | "docx">("pdf");
+  const [atsScore, setAtsScore] = React.useState<number | null>(null);
+  const handleGenerateNew = () => {
+    router.push("/builder");
+  };
 
   React.useEffect(() => {
     async function load() {
@@ -65,6 +70,9 @@ export default function Dashboard() {
 
       setResumes(data || []);
       setLoading(false);
+
+      const storedAts = localStorage.getItem("latestAtsScore");
+      if (storedAts) setAtsScore(parseInt(storedAts, 10));
     }
     load();
   }, [router]);
@@ -109,8 +117,8 @@ export default function Dashboard() {
 
   const stats = [
     { label: "Total Resumes", value: String(resumes.length), icon: FileText, color: "var(--neon-blue)" },
-    { label: "Active", value: String(resumes.filter((r) => r.is_active).length), icon: TrendingUp, color: "var(--neon-green)" },
-    { label: "Downloads", value: "—", icon: Download, color: "var(--neon-purple)" },
+    { label: "Active", value: String(resumes.filter((r) => r.isActive).length), icon: TrendingUp, color: "var(--neon-green)" },
+    { label: "ATS Score", value: atsScore ? `${atsScore}%` : "—", icon: Zap, color: "var(--neon-purple)" },
     { label: "Views", value: "—", icon: Eye, color: "var(--neon-indigo)" },
   ];
 
@@ -139,19 +147,22 @@ export default function Dashboard() {
       <div className="fixed inset-0 pointer-events-none opacity-[0.015]" style={{
         backgroundImage: `radial-gradient(circle, hsl(var(--foreground)) 1px, transparent 1px)`, backgroundSize: "40px 40px",
       }} />
-
       <div className="relative z-10 min-h-screen flex">
         {/* Sidebar */}
         <motion.aside className="w-[260px] flex-shrink-0 flex flex-col border-r"
           style={{ borderColor: "hsl(var(--glass-border))", background: "hsl(235 30% 8% / 0.6)", backdropFilter: "blur(30px)" }}
           initial={{ x: -260, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}>
-          <div className="p-6 pb-4">
-            <h1 className="font-display text-2xl font-extrabold tracking-tight"><span className="text-gradient">Resume AI</span></h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Studio</p>
+          <div className="p-6 pb-4 flex items-center gap-3">
+            <img src="/image_7.png" alt="Anvil Logo" className="w-8 h-8 filter brightness-110 drop-shadow-[0_0_8px_hsl(var(--neon-blue)/0.8)]" />
+            <div>
+              <h1 className="font-display text-2xl font-extrabold tracking-tight leading-none"><span className="text-gradient">SkillForge</span></h1>
+              <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-widest">Studio</p>
+            </div>
           </div>
           <nav className="flex-1 px-3 space-y-1 mt-2">
             {sidebarItems.map((item, idx) => (
               <motion.button key={idx}
+                onClick={() => item.href && router.push(item.href)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative ${
                   item.active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 style={item.active ? { background: "hsl(var(--glass-hover))", boxShadow: "inset 0 0 0 1px hsl(var(--neon-indigo) / 0.2)" } : {}}
@@ -230,24 +241,34 @@ export default function Dashboard() {
                       onClick={() => router.push(`/resume/${resume.id}`)}>
                       <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300"
                         style={{
-                          background: resume.is_active ? "hsl(var(--neon-blue) / 0.12)" : "hsl(var(--glass-hover))",
-                          color: resume.is_active ? "hsl(var(--neon-blue))" : "hsl(var(--muted-foreground))",
+                          background: resume.isActive ? "hsl(var(--neon-blue) / 0.12)" : "hsl(var(--glass-hover))",
+                          color: resume.isActive ? "hsl(var(--neon-blue))" : "hsl(var(--muted-foreground))",
                         }}>
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h4 className="font-semibold text-foreground text-sm truncate">{resume.title}</h4>
-                          {resume.is_active && (
+                          {resume.isActive && (
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider"
                               style={{ background: "hsl(var(--neon-green) / 0.12)", color: "hsl(var(--neon-green))", border: "1px solid hsl(var(--neon-green) / 0.2)" }}>
                               Active
                             </span>
                           )}
+                          {(resume.content as any)?.atsScore && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                              ATS: {(resume.content as any).atsScore}%
+                            </span>
+                          )}
                         </div>
                         <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <Clock className="h-3 w-3" /> {timeAgo(resume.updated_at)}
+                          <Clock className="h-3 w-3" /> {timeAgo(resume.updatedAt ?? resume.createdAt ?? new Date().toISOString())}
                         </span>
+                        {(resume.content as any)?.suggestions?.[0] && (
+                          <p className="text-[10px] text-muted-foreground mt-1 truncate max-w-sm border-l border-white/10 pl-2 ml-1">
+                            Tip: {(resume.content as any).suggestions[0]}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button className="p-2 rounded-lg hover:bg-accent/10 transition-colors" title="Edit"
@@ -289,25 +310,77 @@ export default function Dashboard() {
             {/* Quick actions */}
             <motion.div className="mt-8 grid grid-cols-3 gap-4" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
               {[
-                { icon: Zap, title: "AI Optimize", desc: "Enhance your resume with AI", color: "var(--neon-blue)" },
-                { icon: Download, title: "Export All", desc: "Download all resumes as PDF", color: "var(--neon-purple)" },
-                { icon: Sparkles, title: "Generate New", desc: "Create a resume from scratch", color: "var(--neon-indigo)" },
+                { id: "analyze", icon: Zap, title: "AI Optimize", desc: "Enhance your resume with AI", color: "var(--neon-blue)" },
+                { id: "export", icon: Download, title: "Export All", desc: "Download all resumes", color: "var(--neon-purple)" },
+                { id: "generate", icon: Sparkles, title: "Generate New", desc: "Create a resume from scratch", color: "var(--neon-indigo)" },
               ].map((action, idx) => (
-                <motion.button key={idx} className="feature-item flex items-center gap-4 text-left group" whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }}>
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300"
-                    style={{ background: `hsl(${action.color} / 0.1)`, color: `hsl(${action.color})` }}>
-                    <action.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground text-sm">{action.title}</h4>
-                    <p className="text-xs text-muted-foreground">{action.desc}</p>
-                  </div>
-                </motion.button>
+                <div key={idx} className="relative">
+                  <motion.button 
+                    onClick={async () => {
+                      if (action.id === "generate") {
+                        handleGenerateNew();
+                        return;
+                      }
+                      if (action.id === "export") {
+                        setAiLoading("export");
+                        try {
+                          const userId = localStorage.getItem("userId");
+                          const res = await fetch(`/api/export-all?format=${exportFormat}`, { headers: { "user-id": userId || "" } });
+                          if (res.ok) {
+                            const blob = await res.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `resumes-${exportFormat}.zip`;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(url);
+                          }
+                        } finally {
+                          setAiLoading(null);
+                        }
+                        return;
+                      }
+
+                      setAiLoading(action.id);
+                      await new Promise(r => setTimeout(r, 2000));
+                      setAiLoading(null);
+                    }}
+                    disabled={aiLoading !== null}
+                    className={`feature-item flex items-center gap-4 text-left group w-full ${aiLoading === action.id ? "opacity-50 cursor-not-allowed" : ""}`} 
+                    whileHover={aiLoading === null ? { x: 3 } : {}} whileTap={aiLoading === null ? { scale: 0.98 } : {}}>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300"
+                      style={{ background: `hsl(${action.color} / 0.1)`, color: `hsl(${action.color})` }}>
+                      <action.icon className={`h-5 w-5 ${aiLoading === action.id ? "animate-spin" : ""}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-foreground text-sm flex items-center justify-between">
+                        {aiLoading === action.id ? "Processing..." : action.title}
+                      </h4>
+                      <p className="text-xs text-muted-foreground">{action.desc}</p>
+                    </div>
+                  </motion.button>
+                  {action.id === "export" && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <select 
+                        value={exportFormat}
+                        onChange={(e) => setExportFormat(e.target.value as "pdf"| "docx")}
+                        className="glass-input !py-1 !px-2 !text-xs !rounded-md bg-transparent border-gray-600 focus:outline-none"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="pdf" className="bg-gray-900 text-white">PDF</option>
+                        <option value="docx" className="bg-gray-900 text-white">DOCX</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
               ))}
             </motion.div>
           </div>
         </main>
       </div>
+
     </div>
   );
 }

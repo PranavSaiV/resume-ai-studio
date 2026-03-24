@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { title, personalInfo, experience, education, skills, isActive } = req.body;
+    const { title, personalInfo, experience, education, skills, content, projects, isActive } = req.body;
     const resume = await prisma.resume.updateMany({
       where: { id, userId },
       data: { 
@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         experience: experience || [], 
         education: education || [], 
         skills: skills || [],
+        content: content ? { ...content, projects: projects || [] } : { projects: projects || [] },
         isActive: isActive !== undefined ? isActive : true
       }
     });
