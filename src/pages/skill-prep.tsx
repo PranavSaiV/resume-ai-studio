@@ -17,6 +17,10 @@ import { QuizComponent } from "../components/QuizComponent";
 
 export default function SkillPrep() {
   const router = useRouter();
+  const { domain, topic } = router.query;
+
+  const domainStr = typeof domain === 'string' ? domain : undefined;
+  const topicStr = typeof topic === 'string' ? topic : undefined;
 
   return (
     <div className="min-h-screen w-full overflow-hidden relative bg-background flex">
@@ -57,7 +61,7 @@ export default function SkillPrep() {
            <p className="text-muted-foreground text-sm">Assess your programming knowledge and receive AI feedback on your weak points.</p>
         </div>
         
-        <QuizComponent />
+        <QuizComponent domain={domainStr} topic={topicStr} />
       </main>
     </div>
   );

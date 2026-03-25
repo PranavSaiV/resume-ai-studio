@@ -21,11 +21,14 @@ export default function Analytics() {
   const [userEmail, setUserEmail] = React.useState("");
   
   const [readinessScore, setReadinessScore] = React.useState(0);
+  const [topicPrompt, setTopicPrompt] = React.useState<{isOpen: boolean, domain: string}>({isOpen: false, domain: ''});
+  const [topicInput, setTopicInput] = React.useState('');
   const [quizzes, setQuizzes] = React.useState([
     { id: 1, type: "coding", title: "Two Sum", score: 0, maxScore: 100 },
     { id: 2, type: "coding", title: "Reverse Linked List", score: 0, maxScore: 100 },
-    { id: 3, type: "aptitude", title: "Pattern Recognition", score: 0, maxScore: 100 },
-    { id: 4, type: "aptitude", title: "Logical Reasoning", score: 0, maxScore: 100 },
+    { id: 3, type: "aptitude", title: "Aptitude Quizzes", score: 0, maxScore: 100 },
+    { id: 4, type: "logical", title: "Logical Reasoning", score: 0, maxScore: 100 },
+    { id: 5, type: "java", title: "Java Programming", score: 0, maxScore: 100 },
   ]);
 
   React.useEffect(() => {
@@ -60,7 +63,12 @@ export default function Analytics() {
     router.push("/");
   }
 
-  function handleTakeQuiz(id: number) {
+  function handleTakeQuiz(id: number, type: string) {
+    if (type === "aptitude" || type === "logical" || type === "java") {
+      setTopicPrompt({ isOpen: true, domain: type });
+      return;
+    }
+
     const quiz = quizzes.find(q => q.id === id);
     if (!quiz) return;
     
@@ -70,6 +78,17 @@ export default function Analytics() {
       router.push("/skill-prep");
     }
   }
+
+  const handleTopicSubmit = () => {
+    // Reset overall readiness in analytics and aptitude quiz
+    localStorage.removeItem("quizScores");
+    setReadinessScore(0);
+    setQuizzes(prev => prev.map(q => ({ ...q, score: 0 })));
+    
+    router.push(`/skill-prep?domain=${topicPrompt.domain}${topicInput ? `&topic=${encodeURIComponent(topicInput)}` : ''}`);
+    setTopicPrompt({ isOpen: false, domain: '' });
+    setTopicInput('');
+  };
 
   return (
     <div className="min-h-screen w-full overflow-hidden relative bg-background flex">
@@ -161,7 +180,7 @@ export default function Analytics() {
                     <div className="w-full h-1.5 bg-gray-800 rounded-full mb-3 overflow-hidden">
                       <div className="h-full bg-[var(--neon-purple)]" style={{ width: `${(q.score / q.maxScore) * 100}%` }} />
                     </div>
-                    <button onClick={() => handleTakeQuiz(q.id)} className="text-xs text-primary px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors w-full">
+                    <button onClick={() => handleTakeQuiz(q.id, q.type)} className="text-xs text-primary px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors w-full">
                       {q.score > 0 ? "Retake Quiz" : "Take Quiz"}
                     </button>
                   </div>
@@ -169,20 +188,20 @@ export default function Analytics() {
               </div>
 
               <h3 className="text-lg font-semibold mt-8 flex items-center gap-2">
-                <BrainCircuit className="h-5 w-5 text-[var(--neon-indigo)]" /> Aptitude Quizzes
+                <BrainCircuit className="h-5 w-5 text-[var(--neon-indigo)]" /> Domain Quizzes
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {quizzes.filter(q => q.type === "aptitude").map(q => (
+                {quizzes.filter(q => ["aptitude", "logical", "java"].includes(q.type)).map(q => (
                   <div key={q.id} className="glass-card p-4 group">
                     <div className="flex justify-between items-center mb-2">
                       <h4 className="font-medium text-sm text-foreground">{q.title}</h4>
                       <span className="text-xs text-muted-foreground">{q.score}/{q.maxScore}</span>
                     </div>
                     <div className="w-full h-1.5 bg-gray-800 rounded-full mb-3 overflow-hidden">
-                      <div className="h-full bg-[var(--neon-indigo)]" style={{ width: `${(q.score / q.maxScore) * 100}%` }} />
+                       <div className="h-full bg-[var(--neon-indigo)]" style={{ width: `${(q.score / q.maxScore) * 100}%` }} />
                     </div>
-                    <button onClick={() => handleTakeQuiz(q.id)} className="text-xs text-primary px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors w-full">
-                      {q.score > 0 ? "Retake Quiz" : "Take Quiz"}
+                    <button onClick={() => handleTakeQuiz(q.id, q.type)} className="text-xs text-primary px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors w-full">
+                      Lead to Questionnaire
                     </button>
                   </div>
                 ))}
@@ -191,6 +210,37 @@ export default function Analytics() {
           </div>
         </div>
       </main>
+
+      {/* Topic Prompt Modal */}
+      {topicPrompt.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Which topic would you like to practice?</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {topicPrompt.domain === 'aptitude' ? 'e.g., Problems on Trains, Profit and Loss, Time and Work' : 
+               topicPrompt.domain === 'logical' ? 'e.g., Number Series, Analogies, Blood Relations' : 
+               'e.g., OOPS, Exception Handling, Threads'}
+            </p>
+            <input 
+              type="text" 
+              value={topicInput} 
+              onChange={e => setTopicInput(e.target.value)} 
+              placeholder="Enter topic or leave blank for random"
+              className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--neon-indigo)] transition-colors mb-6"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleTopicSubmit()}
+            />
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setTopicPrompt({ isOpen: false, domain: '' })} className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleTopicSubmit} className="cta-button !w-auto">
+                Start Quiz
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

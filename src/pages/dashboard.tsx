@@ -52,8 +52,57 @@ export default function Dashboard() {
   const [quizAccuracy, setQuizAccuracy] = React.useState<number | null>(null);
   const [totalResumes, setTotalResumes] = React.useState<number>(0);
   const [statusFilter, setStatusFilter] = React.useState<"all" | "active">("all");
+  const [genAiPrompt, setGenAiPrompt] = React.useState<boolean>(false);
+  const [genAiStep, setGenAiStep] = React.useState<"prompt" | "input">("prompt");
+  const [aiRawText, setAiRawText] = React.useState("");
+  const [aiGenerating, setAiGenerating] = React.useState(false);
+
   const handleGenerateNew = () => {
-    router.push("/builder");
+    setGenAiStep("prompt");
+    setAiRawText("");
+    setGenAiPrompt(true);
+  };
+
+  const handleGenerateConfirm = (useAi: boolean) => {
+    if (useAi) {
+      setGenAiStep("input");
+    } else {
+      setGenAiPrompt(false);
+      router.push("/builder");
+    }
+  };
+
+  const handleAiGenerate = async () => {
+    if (!aiRawText.trim()) return;
+    setAiGenerating(true);
+    try {
+      const userId = localStorage.getItem("userId");
+      const res = await fetch("/api/analyze-raw", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json", "user-id": userId || "" },
+        body: JSON.stringify({ text: aiRawText })
+      });
+      if (!res.ok) throw new Error("Analysis failed");
+      const analysis = await res.json();
+      
+      const createRes = await fetch("/api/resumes/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "user-id": userId || "" },
+        body: JSON.stringify({ analysis })
+      });
+      const data = await createRes.json();
+      if (createRes.ok) {
+        router.push(`/resume/${data.id}`);
+      } else {
+        // Fallback to builder
+        router.push("/builder");
+      }
+    } catch {
+       alert("Failed to generate resume from AI");
+    } finally {
+      setAiGenerating(false);
+      setGenAiPrompt(false);
+    }
   };
 
   React.useEffect(() => {
@@ -104,7 +153,9 @@ export default function Dashboard() {
   }
 
   async function handleDeleteResume(resumeId: string) {
-    const res = await fetch(`/api/resumes/${resumeId}`, { method: "DELETE" });
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    const res = await fetch(`/api/resumes/${resumeId}`, { method: "DELETE", headers: { "user-id": userId } });
     if (res.ok) setResumes((prev) => prev.filter((r) => r.id !== resumeId));
   }
 
@@ -223,19 +274,21 @@ export default function Dashboard() {
             <motion.div className="grid grid-cols-4 gap-4 mb-8" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}>
               {stats.map((stat, idx) => (
                 <motion.div key={idx} 
-                  className={`glass-card-hover p-5 group ${stat.id ? "cursor-pointer" : "cursor-default"}`}
+                  className={`glass-card-hover p-5 group flex flex-col justify-between min-h-[140px] cursor-pointer select-none`}
                   style={statusFilter === stat.id ? { border: `1px solid ${stat.color}`, background: "hsl(var(--glass-hover))" } : {}}
                   onClick={() => { if (stat.id) setStatusFilter(stat.id as "all" | "active") }}
                   whileHover={{ y: -2, transition: { duration: 0.2 } }}>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-auto">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300"
                       style={{ background: `hsl(${stat.color} / 0.1)`, color: `hsl(${stat.color})` }}>
                       <stat.icon className="h-5 w-5" />
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground mt-4">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
@@ -380,7 +433,7 @@ export default function Dashboard() {
                       setAiLoading(null);
                     }}
                     disabled={aiLoading !== null}
-                    className={`feature-item flex items-center gap-4 text-left group w-full ${aiLoading === action.id ? "opacity-50 cursor-not-allowed" : ""}`} 
+                    className={`feature-item flex items-center gap-4 text-left group w-full cursor-pointer ${aiLoading === action.id ? "opacity-50 cursor-not-allowed" : ""}`} 
                     whileHover={aiLoading === null ? { x: 3 } : {}} whileTap={aiLoading === null ? { scale: 0.98 } : {}}>
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300"
                       style={{ background: `hsl(${action.color} / 0.1)`, color: `hsl(${action.color})` }}>
@@ -412,6 +465,58 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
+
+      {/* Groq AI Prompt Modal */}
+      {genAiPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-6 w-full max-w-md">
+            {genAiStep === "prompt" ? (
+              <>
+                <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-[var(--neon-purple)]" />
+                  Use Groq AI?
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                  Would you like to use the Groq API to seamlessly collect your data and automatically arrange it into a professional resume format?
+                </p>
+                <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
+                  <button onClick={() => handleGenerateConfirm(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium border border-white/10 hover:bg-white/5 transition-colors">
+                    No, start blank
+                  </button>
+                  <button onClick={() => handleGenerateConfirm(true)} className="cta-button !w-auto">
+                    Yes, use Groq AI
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-[var(--neon-blue)]" />
+                  Enter Data for Groq AI
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  Paste your LinkedIn profile text, existing resume content, or bullet points to have them automatically arranged into the ideal resume format.
+                </p>
+                <textarea 
+                  className="w-full h-32 bg-black/30 border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--neon-blue)] transition-colors mb-4 resize-none"
+                  placeholder="Paste raw text here..."
+                  value={aiRawText}
+                  onChange={(e) => setAiRawText(e.target.value)}
+                  autoFocus
+                />
+                <div className="flex flex-col sm:flex-row justify-end gap-3">
+                  <button onClick={() => setGenAiPrompt(false)} disabled={aiGenerating} className="px-5 py-2.5 rounded-lg text-sm font-medium border border-white/10 hover:bg-white/5 transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleAiGenerate} disabled={aiGenerating || !aiRawText.trim()} className="cta-button !w-auto relative">
+                    {aiGenerating ? "Generating..." : "Generate Resume"}
+                  </button>
+                </div>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );

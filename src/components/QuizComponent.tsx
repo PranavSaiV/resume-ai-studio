@@ -1,23 +1,14 @@
 import React, { useState } from 'react';
 import { CheckCircle2, XCircle, ArrowRight, RefreshCw, Sparkles, Youtube } from 'lucide-react';
 
-interface Question {
-  id: string;
-  text: string;
-  topic: string;
-  options: string[];
-  correctAnswer: string;
+import { Question, questionBank } from '../lib/questionBank';
+
+interface QuizProps {
+  domain?: string;
+  topic?: string;
 }
 
-const mockQuestions: Question[] = [
-  { id: '1', text: "What Hook should be used for side-effects in React?", topic: "React Hooks", options: ["useState", "useEffect", "useMemo", "useContext"], correctAnswer: "useEffect" },
-  { id: '2', text: "Which method creates a new array by mapping over an existing one?", topic: "JavaScript Interation", options: [".forEach()", ".reduce()", ".map()", ".filter()"], correctAnswer: ".map()" },
-  { id: '3', text: "What runs on Node.js?", topic: "Backend Integration", options: ["React plugins", "V8 Engine context", "A new browser standard", "HTML syntax modules"], correctAnswer: "V8 Engine context" },
-  { id: '4', text: "Which CSS property is used structurally to build a glassmorphism effect?", topic: "CSS Glassmorphism", options: ["opacity", "backdrop-filter", "background-blend-mode", "mix-blend-mode"], correctAnswer: "backdrop-filter" },
-  { id: '5', text: "What fundamentally performs SSR identically in Next.js?", topic: "Next.js Rendering", options: ["getStaticProps", "getServerSideProps", "useEffect", "client routing"], correctAnswer: "getServerSideProps" },
-];
-
-export function QuizComponent() {
+export function QuizComponent({ domain, topic }: QuizProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -28,6 +19,26 @@ export function QuizComponent() {
   const [quizFinished, setQuizFinished] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+
+  const [mockQuestions, setMockQuestions] = useState<Question[]>([]);
+
+  React.useEffect(() => {
+    // Filter questions based on domain and topic
+    let pool = questionBank;
+    if (domain) {
+      pool = pool.filter(q => q.domain === domain);
+    }
+    if (topic && topic.trim() !== '') {
+      const filtered = pool.filter(q => q.topic.toLowerCase().includes(topic.toLowerCase()));
+      if (filtered.length > 0) pool = filtered; // fallback to domain if topic has zero matches
+    }
+    
+    // Randomise questions on mount
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    setMockQuestions(shuffled.slice(0, 5));
+  }, [domain, topic]);
+
+  if (mockQuestions.length === 0) return null;
 
   const question = mockQuestions[currentIndex];
 
@@ -102,6 +113,20 @@ export function QuizComponent() {
     setWrongTopics([]);
     setQuizFinished(false);
     setAiSuggestion(null);
+    
+    
+    // Randomise questions again
+    let pool = questionBank;
+    if (domain) {
+      pool = pool.filter(q => q.domain === domain);
+    }
+    if (topic && topic.trim() !== '') {
+      const filtered = pool.filter(q => q.topic.toLowerCase().includes(topic.toLowerCase()));
+      if (filtered.length > 0) pool = filtered;
+    }
+    
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    setMockQuestions(shuffled.slice(0, 5));
   };
 
   if (quizFinished) {
