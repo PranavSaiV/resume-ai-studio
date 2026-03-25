@@ -17,12 +17,31 @@ export default function CodingModule() {
     { id: "java", name: "Java" },
   ];
 
-  const problem = {
-    title: "Reverse a String",
-    topic: "Array",
-    description: "Write a function that reverses a string. The input string is given as an array of characters s. You must do this by modifying the input array in-place with O(1) extra memory.",
-    testCases: ["['h','e','l','l','o'] -> ['o','l','l','e','h']"]
+  const { title } = router.query;
+  const problemTitle = typeof title === 'string' ? title : "Reverse a String";
+
+  const problems: Record<string, any> = {
+    "Two Sum": {
+      title: "Two Sum",
+      topic: "Array",
+      description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice.",
+      testCases: ["[2,7,11,15], target = 9 -> [0,1]"]
+    },
+    "Reverse Linked List": {
+      title: "Reverse Linked List",
+      topic: "Linked List",
+      description: "Given the head of a singly linked list, reverse the list, and return the reversed list.",
+      testCases: ["[1,2,3,4,5] -> [5,4,3,2,1]"]
+    },
+    "Reverse a String": {
+      title: "Reverse a String",
+      topic: "String",
+      description: "Write a function that reverses a string. The input string is given as an array of characters s. You must do this by modifying the input array in-place with O(1) extra memory.",
+      testCases: ["['h','e','l','l','o'] -> ['o','l','l','e','h']"]
+    }
   };
+
+  const problem = problems[problemTitle] || problems["Reverse a String"];
 
   async function handleRun() {
     setEvaluating(true);

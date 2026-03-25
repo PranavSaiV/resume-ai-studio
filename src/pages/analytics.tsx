@@ -61,9 +61,11 @@ export default function Analytics() {
   }
 
   function handleTakeQuiz(id: number) {
-    const qType = quizzes.find(q => q.id === id)?.type;
-    if (qType === "coding") {
-      router.push("/coding");
+    const quiz = quizzes.find(q => q.id === id);
+    if (!quiz) return;
+    
+    if (quiz.type === "coding") {
+      router.push(`/coding?title=${encodeURIComponent(quiz.title)}`);
     } else {
       router.push("/skill-prep");
     }
